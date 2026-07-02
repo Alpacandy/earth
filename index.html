@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D交互地球</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="info">
+        <h1>🌍 羊驼的地球</h1>
+    </div>
+
+    <button id="settingsIcon" class="settings-icon">⚙️</button>
+
+    <div id="controlPanel" class="control-panel hidden">
+        <div class="panel-header">
+            <span>模式控制</span>
+            <button id="closePanel" class="close-btn">✕</button>
+        </div>
+
+        <div class="control-group">
+            <button id="realTimeBtn" class="mode-btn active">⏰ 真实时间</button>
+            <button id="freeRotateBtn" class="mode-btn">🔄 自由自转</button>
+        </div>
+
+        <div id="realTimePanel" class="panel">
+            <div class="time-display">
+                <span id="currentTime">--:--:--</span>
+            </div>
+            <div class="info-label">东八区</div>
+        </div>
+
+        <div id="freeRotatePanel" class="panel" style="display: none;">
+            <label>
+                <span class="label-text">周期：<span id="periodValue">30</span>秒</span>
+                <input type="range" id="periodSlider" min="5" max="120" value="30" step="5">
+            </label>
+        </div>
+    </div>
+
+    <div id="loading">
+        <div class="loader"></div>
+        <p>加载中...</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
