@@ -1,0 +1,7 @@
+# Cloudflare Pages配置
+
+[build]
+  # 无需构建
+  command = ""
+  # 直接使用根目录
+  publish = "."
