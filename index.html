@@ -29,6 +29,27 @@
                 <span id="currentTime">--:--:--</span>
             </div>
             <div class="info-label">东八区</div>
+
+            <!-- 时间预览控制 -->
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                    <input type="checkbox" id="previewToggle" style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">
+                    <span>开启时间预览</span>
+                </label>
+
+                <div id="previewControls" style="display: none; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
+                        <span>-6小时</span>
+                        <span id="previewValue">0小时</span>
+                        <span>+6小时</span>
+                    </div>
+                    <input type="range" id="previewSlider" min="-6" max="6" step="0.5" value="0"
+                           style="width: 100%; cursor: pointer;">
+                    <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 5px; text-align: center;">
+                        预览时间: <span id="previewTime">--</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="freeRotatePanel" class="panel" style="display: none;">

@@ -10,6 +10,10 @@ let mode = 'realTime'; // 'realTime' 或 'freeRotate'
 let rotationPeriod = 30; // 自由自转模式的周期（秒）
 let autoRotateSpeed = 0; // 当前自转速度
 
+// 时间预览控制
+let previewEnabled = false; // 是否开启预览
+let previewOffset = 0; // 预览时间偏移（小时）
+
 // 初始化场景
 function init() {
     // 创建场景
@@ -362,6 +366,59 @@ function initControls() {
         autoRotateSpeed = (Math.PI * 2) / (rotationPeriod * 60); // 弧度每帧
     });
 
+    // 时间预览控制
+    const previewToggle = document.getElementById('previewToggle');
+    const previewControls = document.getElementById('previewControls');
+    const previewSlider = document.getElementById('previewSlider');
+    const previewValue = document.getElementById('previewValue');
+    const previewTime = document.getElementById('previewTime');
+
+    // 只有在元素存在时才添加事件监听器
+    if (previewToggle && previewControls && previewSlider && previewValue && previewTime) {
+        // 开启/关闭预览
+        previewToggle.addEventListener('change', (e) => {
+            previewEnabled = e.target.checked;
+            previewControls.style.display = previewEnabled ? 'block' : 'none';
+
+            if (!previewEnabled) {
+                // 关闭预览，重置偏移
+                previewOffset = 0;
+                previewSlider.value = 0;
+            }
+
+            // 更新地球旋转
+            if (mode === 'realTime') {
+                updateEarthRotationForRealTime();
+            }
+        });
+
+        // 预览滑块
+        previewSlider.addEventListener('input', (e) => {
+            previewOffset = parseFloat(e.target.value);
+
+            // 更新显示
+            const sign = previewOffset > 0 ? '+' : '';
+            previewValue.textContent = `${sign}${previewOffset}小时`;
+
+            // 计算预览时间
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const chinaTime = new Date(utc + (3600000 * 8));
+            const previewDate = new Date(chinaTime.getTime() + previewOffset * 3600000);
+
+            const hours = String(previewDate.getHours()).padStart(2, '0');
+            const minutes = String(previewDate.getMinutes()).padStart(2, '0');
+            previewTime.textContent = `${hours}:${minutes}`;
+
+            // 更新地球旋转
+            if (mode === 'realTime' && previewEnabled) {
+                updateEarthRotationForRealTime();
+            }
+        });
+    } else {
+        console.warn('时间预览元素未找到，功能已禁用');
+    }
+
     // 初始化自转速度
     autoRotateSpeed = (Math.PI * 2) / (rotationPeriod * 60);
 
@@ -375,6 +432,13 @@ function initControls() {
 
     // 每小时更新一次太阳赤纬角（实际上一天变化很小）
     setInterval(updateSunDeclination, 3600000);
+
+    // 每分钟校准一次地球旋转，防止累积误差
+    setInterval(() => {
+        if (mode === 'realTime' && !previewEnabled && !userInteracting) {
+            updateEarthRotationForRealTime();
+        }
+    }, 60000); // 60秒校准一次
 }
 
 // 更新东八区时间显示
@@ -431,9 +495,17 @@ function updateEarthRotationForRealTime() {
     const hours = chinaTime.getHours();
     const minutes = chinaTime.getMinutes();
     const seconds = chinaTime.getSeconds();
-    const totalHours = hours + minutes / 60 + seconds / 3600;
+    let totalHours = hours + minutes / 60 + seconds / 3600;
 
-    console.log(`东八区时间: ${hours}:${minutes}:${seconds}, 总小时数: ${totalHours}`);
+    // 如果开启预览，添加时间偏移
+    if (previewEnabled) {
+        totalHours += previewOffset;
+        // 处理跨天情况
+        if (totalHours < 0) totalHours += 24;
+        if (totalHours >= 24) totalHours -= 24;
+    }
+
+    console.log(`东八区时间: ${hours}:${minutes}:${seconds}, 总小时数: ${totalHours}${previewEnabled ? ` (预览偏移: ${previewOffset}h)` : ''}`);
 
     // 太阳从X轴负方向照射
     // 12点时，东经120度应该正对X轴负方向
@@ -441,9 +513,9 @@ function updateEarthRotationForRealTime() {
     const lon120 = (120 / 180) * Math.PI;
     const hoursFrom12 = totalHours - 12;
 
-    // 地球向西转，微调
-    const fineAdjust = -0.89; // 微调53分钟
-    const rotation = lon120 - ((hoursFrom12 + fineAdjust) * Math.PI / 12);
+    // 地球自西向东转，时间越晚，Y轴旋转角度越大
+    const fineAdjust = -4.7; // 微调
+    const rotation = lon120 + ((hoursFrom12 + fineAdjust) * Math.PI / 12); // 改成加号
 
     earth.rotation.y = rotation;
 
@@ -456,7 +528,7 @@ function updateEarthRotationForRealTime() {
 
 // 计算真实地球自转增量（每帧）
 function getRealEarthRotationSpeed() {
-    // 真实地球24小时转360度 = 2π弧度
+    // 真实地球24小时转360度 = 2π弧度，自西向东
     // 假设60fps，24小时 = 24 * 3600 * 60 帧
     return (Math.PI * 2) / (24 * 3600 * 60);
 }
@@ -467,18 +539,19 @@ function animate() {
 
     if (mode === 'realTime') {
         // 真实时间模式
-        if (!userInteracting && earth) {
+        // 预览模式下暂停自动旋转
+        if (!userInteracting && earth && !previewEnabled) {
             // 按照真实速度自转
             earth.rotation.y += getRealEarthRotationSpeed();
             if (clouds) {
                 clouds.rotation.y += getRealEarthRotationSpeed() * 1.2; // 云层稍快
             }
         }
-        // 如果用户正在交互，只改变视角，不改变地球旋转
+        // 如果用户正在交互或开启预览，只改变视角，不改变地球旋转
     } else if (mode === 'freeRotate') {
-        // 自由自转模式
+        // 自由自转模式 - 自西向东
         if (earth) {
-            earth.rotation.y += autoRotateSpeed;
+            earth.rotation.y += autoRotateSpeed; // 改成加法，自西向东
         }
         if (clouds) {
             clouds.rotation.y += autoRotateSpeed * 1.2;
